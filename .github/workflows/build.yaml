@@ -77,6 +77,7 @@ jobs:
       - name: Merge
         run: |
           docker buildx imagetools create \
+            --annotation "index:org.opencontainers.image.description=Import tarball from alpine" \
             ghcr.io/${{ github.repository }}:${{ matrix.MMR }}-aarch64 \
             ghcr.io/${{ github.repository }}:${{ matrix.MMR }}-armhf \
             ghcr.io/${{ github.repository }}:${{ matrix.MMR }}-armel \
