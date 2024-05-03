@@ -1,0 +1,70 @@
+name: Get Alpine
+on:
+  workflow_dispatch:
+
+jobs:
+  alpine:
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+          - MMR: 3.19.1
+            MM: 3.19
+          - MMR: 3.19.0
+            MM: 3.19
+    runs-on: ubuntu-latest
+    container: alpine:latest
+
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+
+    steps:
+      - name: Pre-Reqs
+        run: |
+          apk update
+          apk add docker docker-cli docker-cli-buildx curl
+
+      - name: Import
+        run: |
+          docker import --platform aarch64 --message "Import tarball from alpine" --change "ENTRYPOINT /bin/ash" --change "ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" https://dl-cdn.alpinelinux.org/alpine/v${{ matrix.MM }}/releases/aarch64/alpine-minirootfs-${{ matrix.MMR }}-aarch64.tar.gz localhost:5000/alpine:${{ matrix.MMR }}-aarch64
+          docker import --platform armhf   --message "Import tarball from alpine" --change "ENTRYPOINT /bin/ash" --change "ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" https://dl-cdn.alpinelinux.org/alpine/v${{ matrix.MM }}/releases/aarch64/alpine-minirootfs-${{ matrix.MMR }}-armhf.tar.gz   localhost:5000/alpine:${{ matrix.MMR }}-armhf
+          docker import --platform armel   --message "Import tarball from alpine" --change "ENTRYPOINT /bin/ash" --change "ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" https://dl-cdn.alpinelinux.org/alpine/v${{ matrix.MM }}/releases/aarch64/alpine-minirootfs-${{ matrix.MMR }}-armv7.tar.gz   localhost:5000/alpine:${{ matrix.MMR }}-armel
+          docker import --platform ppc64le --message "Import tarball from alpine" --change "ENTRYPOINT /bin/ash" --change "ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" https://dl-cdn.alpinelinux.org/alpine/v${{ matrix.MM }}/releases/aarch64/alpine-minirootfs-${{ matrix.MMR }}-ppc64le.tar.gz localhost:5000/alpine:${{ matrix.MMR }}-ppc64le
+          docker import --platform s390x   --message "Import tarball from alpine" --change "ENTRYPOINT /bin/ash" --change "ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" https://dl-cdn.alpinelinux.org/alpine/v${{ matrix.MM }}/releases/aarch64/alpine-minirootfs-${{ matrix.MMR }}-s390x.tar.gz   localhost:5000/alpine:${{ matrix.MMR }}-s390x
+          docker import --platform i386    --message "Import tarball from alpine" --change "ENTRYPOINT /bin/ash" --change "ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" https://dl-cdn.alpinelinux.org/alpine/v${{ matrix.MM }}/releases/aarch64/alpine-minirootfs-${{ matrix.MMR }}-x86.tar.gz     localhost:5000/alpine:${{ matrix.MMR }}-i386
+          docker import --platform x86_64  --message "Import tarball from alpine" --change "ENTRYPOINT /bin/ash" --change "ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" https://dl-cdn.alpinelinux.org/alpine/v${{ matrix.MM }}/releases/aarch64/alpine-minirootfs-${{ matrix.MMR }}-x86_64.tar.gz  localhost:5000/alpine:${{ matrix.MMR }}-x86_64
+
+      - name: Push
+        run: |
+          docker push localhost:5000/alpine:${{ matrix.MMR }}-aarch64
+          docker push localhost:5000/alpine:${{ matrix.MMR }}-armhf
+          docker push localhost:5000/alpine:${{ matrix.MMR }}-armel
+          docker push localhost:5000/alpine:${{ matrix.MMR }}-ppc64le
+          docker push localhost:5000/alpine:${{ matrix.MMR }}-s390x
+          docker push localhost:5000/alpine:${{ matrix.MMR }}-i386
+          docker push localhost:5000/alpine:${{ matrix.MMR }}-x86_64
+      
+      - name: Cleanup
+        run: |
+          docker image rm localhost:5000/alpine:${{ matrix.MMR }}-aarch64
+          docker image rm localhost:5000/alpine:${{ matrix.MMR }}-armhf
+          docker image rm localhost:5000/alpine:${{ matrix.MMR }}-armel
+          docker image rm localhost:5000/alpine:${{ matrix.MMR }}-ppc64le
+          docker image rm localhost:5000/alpine:${{ matrix.MMR }}-s390x
+          docker image rm localhost:5000/alpine:${{ matrix.MMR }}-i386
+          docker image rm localhost:5000/alpine:${{ matrix.MMR }}-x86_64
+
+      - name: Merge
+        run: |
+          docker buildx imagetools create \
+            localhost:5000/alpine:${{ matrix.MMR }}-aarch64 \
+            localhost:5000/alpine:${{ matrix.MMR }}-armhf \
+            localhost:5000/alpine:${{ matrix.MMR }}-armel \
+            localhost:5000/alpine:${{ matrix.MMR }}-ppc64le \
+            localhost:5000/alpine:${{ matrix.MMR }}-s390x \
+            localhost:5000/alpine:${{ matrix.MMR }}-i386 \
+            localhost:5000/alpine:${{ matrix.MMR }}-x86_64 \
+            -t localhost:5000/alpine:${{ matrix.MMR }}
