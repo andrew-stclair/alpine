@@ -1,5 +1,6 @@
 name: Get Alpine
 on:
+  push:
   workflow_dispatch:
 
 jobs:
@@ -37,7 +38,7 @@ jobs:
           apk add docker docker-cli docker-cli-buildx curl
 
       - name: Login to Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
